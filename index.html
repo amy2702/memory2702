@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>치매예방 기억력 게임 - 카드 짝 맞추기</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      grid-gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .card {
+      width: 100px;
+      height: 100px;
+      background-color: #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      cursor: pointer;
+      border-radius: 10px;
+    }
+    .card.flipped {
+      background-color: #fff;
+    }
+    .card.matched {
+      background-color: lightgreen;
+      cursor: default;
+    }
+    #score, #timer, #level {
+      margin-top: 15px;
+      font-size: 18px;
+    }
+    #startBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧠 기억력 게임: 카드 짝 맞추기</h1>
+  <div id="score">점수: 0</div>
+  <div id="timer">남은 시간: 60초</div>
+  <div id="level">난이도: 1</div>
+  <button id="startBtn">게임 시작</button>
+  <div class="game-board" id="gameBoard"></div>
+
+  <audio id="matchSound" src="match.mp3"></audio>
+  <audio id="failSound" src="fail.mp3"></audio>
+
+  <script>
+    let emojisBase = ['🍎', '🍌', '🍇', '🍓', '🍍', '🥝', '🥕', '🌽'];
+    let gameTime = 60;
+    let score = 0;
+    let level = 1;
+    let timerInterval;
+    let firstCard, secondCard;
+    let lockBoard = false;
+
+    const board = document.getElementById('gameBoard');
+    const scoreDisplay = document.getElementById('score');
+    const timerDisplay = document.getElementById('timer');
+    const levelDisplay = document.getElementById('level');
+    const startBtn = document.getElementById('startBtn');
+    const matchSound = document.getElementById('matchSound');
+    const failSound = document.getElementById('failSound');
+
+    startBtn.addEventListener('click', startGame);
+
+    function startGame() {
+      clearInterval(timerInterval);
+      board.innerHTML = '';
+      score = 0;
+      gameTime = 60;
+      levelDisplay.textContent = '난이도: ' + level;
+      scoreDisplay.textContent = '점수: ' + score;
+      timerDisplay.textContent = '남은 시간: ' + gameTime + '초';
+      let emojis = emojisBase.slice(0, 4 + level);
+      let cards = [...emojis, ...emojis];
+      cards.sort(() => 0.5 - Math.random());
+
+      cards.forEach((emoji, index) => {
+        const card = document.createElement('div');
+        card.classList.add('card');
+        card.dataset.emoji = emoji;
+        card.dataset.index = index;
+        card.innerHTML = '';
+        board.appendChild(card);
+
+        card.addEventListener('click', () => handleCardClick(card));
+      });
+
+      timerInterval = setInterval(() => {
+        gameTime--;
+        timerDisplay.textContent = '남은 시간: ' + gameTime + '초';
+        if (gameTime === 0) {
+          clearInterval(timerInterval);
+          alert('시간 종료! 점수: ' + score);
+          level = 1;
+        }
+      }, 1000);
+    }
+
+    function handleCardClick(card) {
+      if (lockBoard || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+      card.innerHTML = card.dataset.emoji;
+      card.classList.add('flipped');
+
+      if (!firstCard) {
+        firstCard = card;
+      } else {
+        secondCard = card;
+        lockBoard = true;
+
+        if (firstCard.dataset.emoji === secondCard.dataset.emoji) {
+          firstCard.classList.add('matched');
+          secondCard.classList.add('matched');
+          score += 10;
+          matchSound.play().catch(() => {});
+          checkLevelUp();
+          resetTurn();
+        } else {
+          failSound.play().catch(() => {});
+          setTimeout(() => {
+            firstCard.innerHTML = '';
+            secondCard.innerHTML = '';
+            firstCard.classList.remove('flipped');
+            secondCard.classList.remove('flipped');
+            resetTurn();
+          }, 800);
+        }
+        scoreDisplay.textContent = '점수: ' + score;
+      }
+    }
+
+    function resetTurn() {
+      [firstCard, secondCard] = [null, null];
+      lockBoard = false;
+    }
+
+    function checkLevelUp() {
+      const matched = document.querySelectorAll('.matched');
+      const total = document.querySelectorAll('.card').length;
+      if (matched.length === total) {
+        clearInterval(timerInterval);
+        alert('성공! 다음 난이도로 갑니다!');
+        level++;
+        startGame();
+      }
+    }
+  </script>
+</body>
+</html>
